@@ -37,8 +37,8 @@ Libraries used in this project:
 #TO-DO
 ===
 
-- [x] Implement data system to store in the SD card
-- [x] Use SD library and code for that
-- [x] Implement Sleep mode of the ATmega
-- [x] Design the interface of the display and decide the menus
-- [ ] Functions to calculate volume (*liters*)
+- [ ] Implement data system to store in the SD card
+- [ ] Use SD library and code for that
+- [ ] Implement Sleep mode of the ATmega
+- [ ] Design the interface of the display and decide the menus
+- [x] Functions to calculate volume (*liters*)

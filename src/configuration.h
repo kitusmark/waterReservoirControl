@@ -11,23 +11,24 @@ Modify the pins in order to adapt to your hardware
 ###################################################################*/
 
 /********************* PARAMETERS **************************/
-// For the Adafruit shield, these are the default.
-#define TFT_DC 9
-#define TFT_CS 10
-//This pins are just for the Leonardo and Micro Arduinos, 32u4 based.
-//Comment the next line if Arduino UNO is used
-//#define leonardo true
-#ifdef leonardo  //For the Arduino Leonardo or the micro
-    #define TFT_MOSI 16
-    #define TFT_MISO 14
-    #define TFT_CLK 15
-    #define TFT_RST 8
-#endif
+//Select the board you're using, comment the others
+#define MEGA         //Arduino Mega2560
+//#define LEONARDO   //All the boards based on the 32u4 microcrontroller
+//#define UNO        //Atmega168/328 based boards
 
-//Deposit measures in meters
-#define HEIGHT 2
-#define WIDTH 5.4
-#define DEPTH 1.8
+//Comment if you don't need to print the parameters during the start via serial port
+#define PARAMETERS
+
+//Set the name of the log file saved to the SD card
+#define LOGFILENAME "log.csv"
+
+//Set the Serial port communication speed
+#define SERIALSPEED 9600
+
+//Deposit measures in centimeters
+#define HEIGHT 200
+#define WIDTH 540
+#define DEPTH 180
 
 //Max distance that the NewPing library can compute. In centimeters
 #define MAX_DISTANCE 250
@@ -65,8 +66,27 @@ Modify the pins in order to adapt to your hardware
 
 
 /********************* PINS ********************************/
+// For the Adafruit shield, these are the default.
+#define TFT_DC 9
+#define TFT_CS 10
+
+#ifdef MEGA
+    #define TFT_MOSI 51
+    #define TFT_MISO 50
+    #define TFT_CLK 52
+    #define TFT_RST 8
+    #define TFT_CS 53
+#endif
+
+#ifdef LEONARDO  //For the Arduino Leonardo or the micro
+    #define TFT_MOSI 16
+    #define TFT_MISO 14
+    #define TFT_CLK 15
+    #define TFT_RST 8
+#endif
+
 //SD Card
-const int SDCS = 10; //Need to change because TFT is on the same CS pin
+const int SDCS = 4; //Need to change because TFT is on the same CS pin
 
 //Ultrasonic sensor definitions
 #define TRIGGER 12 //pin for the signal emitter

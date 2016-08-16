@@ -18,12 +18,12 @@ We'll use the library NewPing.h from https://code.google.com/p/arduino-new-ping/
 the pings from the ultrasonic sensor
 *********************************************************************************************/
 //Go to configuration.h and select if Arduino Leonardo is used by commenting the #define
-#ifdef leonardo  //For the Arduino Leonardo or the micro
+#ifdef LEONARDO  //For the Arduino Leonardo or the micro
     Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
 #endif
 
-#ifndef leonardo  //Only for the Uno
-    Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
+#ifdef MEGA  //Only for the Uno
+    Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
 #endif
 
 //Creating a NewPing object
@@ -33,33 +33,38 @@ NewPing sensor(TRIGGER, ECHO, MAX_DISTANCE);
 Sleep sleep;
 
 //************** Program variables *******************************
-uint8_t screen;
+uint8_t screen;     //Variable to track screens
+bool cardPresent;   //Variable to know if the SD card is present or not
+bool logFileExists; //Variable to know if the log file already exists
+
+String timeStamp;   //String to store the time from the RTC Module
 String dataString;  //String to save the information to the SD card
-unsigned int waterLevel;
-unsigned int liters;
+
+unsigned int waterLevel;    //Variable that stores the water level in meters
+unsigned int liters;        //Variable that stores the amount of water in liters
 
 //--------------------------------------------------------
 void setup()
 {
-  Serial.begin(9600); //More than enough
-  #ifdef leonardo
+  Serial.begin(SERIALSPEED); //More than enough
+  #ifdef LEONARDO
     while (!Serial) {
      ;    //Wait and do nothing... 32u4 microcrontroller only
     }
   #endif
 
   Serial.println(F("Water Reservoir Monitoring Starting...!"));
+
+  #ifdef PARAMETERS
+    printParameters();    //Uncomment #define PARAMETERS in configuration.h if you don't want to print this out
+  #endif
+
   Serial.println("initializing the SD card");
   // make sure that the default chip select pin is set to
   // output, even if you don't use it:
   pinMode(SDCS, OUTPUT);
   // see if the card is present and can be initialized:
-  if (!SD.begin(SDCS)) {
-    Serial.println("Card failed, or not present");
-    // don't do anything more:
-    return;
-  }
-  Serial.println("card initialized.");
+  initSDCard();
 
   Serial.println("Initializing the TFT Display");
   tft.begin();
@@ -71,66 +76,147 @@ void setup()
 //--------------------------------------------------------
 void loop()
 {
-  delay(100);
+  delay(1000);
   //getTime();
-  //getDistance();
-  //getVolume();
+  getDistance();
+  getVolume();
   //saveDataSD();
-  sleep.pwrDownMode();  //set sleep mode
-  sleep.sleepDelay(SLEEPTIME);
+  //sleep.pwrDownMode();  //set sleep mode
+  //sleep.sleepDelay(SLEEPTIME);
 }
 //--------------------------------------------------------
-float getDistance() {
-  waterLevel = 0;
-  unsigned int time = sensor.ping(); //get the time of a pulse in microseconds
-  unsigned int distance = time / US_ROUNDTRIP_CM; //Convert to centimeters
-  waterLevel = (HEIGHT * 1000) - distance;
+void getDistance() {
+    unsigned int distance = 0;
+    waterLevel = 0;
+    for (uint8_t i = 0; i < 5; i++) {       //Let's average out the signal
+      unsigned int time = sensor.ping();    //get the time of a pulse in microseconds
+      distance += time / US_ROUNDTRIP_CM;   //Convert to centimeters
+      delay(30);                            //Specified by the library
+    }
 
-  Serial.print("Water Level: "); //Water height display
-  Serial.print(waterLevel);
-  Serial.println(" cm");
+    distance = round(distance / 5);
+    //Let's check if distance is in range
+    if (distance > MAX_DISTANCE) {
+        //Ultrasonic sensor error
+        Serial.println("Ultrasonic sensor range overflow. Please Check!");
+        return;
+    } else {
+        //Everything seems fine...
+        waterLevel = HEIGHT - distance;
+    }
+
+    Serial.print("Distance: ");
+    Serial.print(distance);
+    Serial.println(" cm");
+
+    Serial.print("Water Level: ");  //Water height display
+    Serial.print(waterLevel);
+    Serial.println(" cm");
 }
 
 void getVolume(){
-  int volume = (waterLevel/1000) * WIDTH * DEPTH; //Volume in cubic meters
-  liters = volume * 1000; //Liters of liquid
+    liters = 0;
+    unsigned int volume = waterLevel * WIDTH * DEPTH;   //Volume in cubic centimeters
+    volume = round(volume / 1000000);                   //Now in cubic meters
+    liters = volume * 1000;                             //Liters of liquid
 
-  //Send the data to the Serial port
-  Serial.print("Volume: ");
-  Serial.print(liters);
-  Serial.println(" liters");
+    //Send the data to the Serial port
+    Serial.print("Volume: ");
+    Serial.print(liters);
+    Serial.println(" liters");
 }
 
-void getTime() {
+void getTimeStamp() {
  //function that gets the time and date from a RTC Module
+ //and stores the time stamps in timeStamp
 }
 
 void saveDataSD() {
-  dataString = "";
-  //First we get the time & date
+    if (cardPresent && logFileExists) {      //The SD card is present and we can log
+        dataString = "";
+        //First we get the time & date
+        dataString += timeStamp;
+        dataString += ",";
+        //Then we get the water level and the liters
+        dataString += String(waterLevel);
+        dataString += ",";
+        dataString += String(liters);
+        dataString += ";";
 
-  //Then we get the water level and the liters
-  dataString += String(waterLevel);
-  dataString += ",";
-  dataString += String(liters);
+        //Save it to the SD Card
+        File logFile = SD.open(LOGFILENAME, FILE_WRITE);
 
-  //Save it to the SD Card
-  File dataFile = SD.open("deposito.txt", FILE_WRITE);
+        // if the file is available, write to it:
+        if (logFile) {
+          logFile.println(dataString);
+          logFile.close();
+          // print to the serial port too:
+          Serial.println(dataString);
+        }
+        // if the file isn't open, pop up an error:
+        else {
+          Serial.print("error opening ");
+          Serial.println(LOGFILENAME);
+        }
+    } else {      //The SD card is not present. Let's try and initialize again
+        initSDCard();
+    }
+}
 
-  // if the file is available, write to it:
-  if (dataFile) {
-    dataFile.println(dataString);
-    dataFile.close();
-    // print to the serial port too:
-    Serial.println(dataString);
-  }
-  // if the file isn't open, pop up an error:
-  else {
-    Serial.println("error opening deposito.txt");
-  }
+void initSDCard () {
+    //This function initializes the SD Card and stores some status
+    if (!SD.begin(SDCS)) {
+      Serial.println("Card failed, or not present. Not logging data!");
+      cardPresent = false;
+    } else {
+        cardPresent = true;
+        if (SD.exists(LOGFILENAME)) {
+            //the log file already exists
+            Serial.print("the log file ");
+            Serial.print(LOGFILENAME);
+            Serial.println(" already exists");
+            logFileExists = true;
+        } else {
+          //the log file does not exists
+          Serial.println("The log file does NOT exists. Creating it...");
+          File logFile = SD.open(LOGFILENAME, FILE_WRITE);
+          logFile.close();
+          Serial.println("Log file created.");
+        }
+        Serial.println("card initialized.");
+      }
 
 }
 
+void printParameters () {
+    //This function prints some of the parameters in the configuration.h file
+    Serial.println();
+    Serial.println("Your parameters are the following. Please modify them under configuration.h and rebuild.");
+    Serial.println();
+    Serial.println("-------------------TFT DISPLAY--------------------");
+    Serial.print("TFT_MISO: ");
+    Serial.println(TFT_MISO);
+    Serial.print("TFT_MOSI: ");
+    Serial.println(TFT_MOSI);
+    Serial.print("TFT_CLK: ");
+    Serial.println(TFT_CLK);
+    Serial.print("TFT_CS: ");
+    Serial.println(TFT_CS);
+    Serial.print("TFT_RST: ");
+    Serial.println(TFT_RST);
+
+    Serial.println("--------------------DEPOSIT PARAMETERS------------------");
+    Serial.print("DEPOSIT MEASURES (in meters): ");
+    Serial.print("HEIGHT: ");
+    Serial.print(HEIGHT);
+    Serial.print(" WIDTH: ");
+    Serial.print(WIDTH);
+    Serial.print(" DEPTH: ");
+    Serial.println(DEPTH);
+
+}
+
+/********************************* GRAPHIC FUNCTIONS **********************************/
 void welcomeText(){
    screen = 0;
    tft.fillScreen(WHITE);

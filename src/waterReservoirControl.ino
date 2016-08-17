@@ -4,7 +4,7 @@
 #include <Adafruit_ILI9341.h>
 #include <Adafruit_GFX.h>
 #include <NewPing.h>
-#include <configuration.h>
+#include "configuration.h"
 /********************************************************************************************
 Marc Cobler Cosmen - March 2015
 waterReservoirControl Project
@@ -42,6 +42,8 @@ String dataString;  //String to save the information to the SD card
 
 unsigned int waterLevel;    //Variable that stores the water level in meters
 unsigned int liters;        //Variable that stores the amount of water in liters
+unsigned long volume;       //Varible that stores the amount of water in cubic centimenters. MAX volume is HEIGHT*WIDTH*DEPTH
+unsigned int litersHistory[HISTORY];
 
 //--------------------------------------------------------
 void setup()
@@ -55,11 +57,15 @@ void setup()
 
   Serial.println(F("Water Reservoir Monitoring Starting...!"));
 
+  //Init the litersHistory Array
+  for (uint8_t i = 0; i < HISTORY; i++) {
+      litersHistory[i] = 0;
+  }
+
   #ifdef PARAMETERS
     printParameters();    //Uncomment #define PARAMETERS in configuration.h if you don't want to print this out
   #endif
 
-  Serial.println("initializing the SD card");
   // make sure that the default chip select pin is set to
   // output, even if you don't use it:
   pinMode(SDCS, OUTPUT);
@@ -69,9 +75,8 @@ void setup()
   Serial.println("Initializing the TFT Display");
   tft.begin();
   tft.setRotation(1); //Set the display in landscape mode
-  Serial.println("Displaying the welcome text");
-  welcomeText();
-  mainScreen();
+  //welcomeText();
+  //mainScreen();
 }
 //--------------------------------------------------------
 void loop()
@@ -88,17 +93,18 @@ void loop()
 void getDistance() {
     unsigned int distance = 0;
     waterLevel = 0;
-    for (uint8_t i = 0; i < 5; i++) {       //Let's average out the signal
+    for (uint8_t i = 0; i < SENSORSAMPLES; i++) {       //Let's average out the signal
       unsigned int time = sensor.ping();    //get the time of a pulse in microseconds
       distance += time / US_ROUNDTRIP_CM;   //Convert to centimeters
       delay(30);                            //Specified by the library
     }
 
-    distance = round(distance / 5);
+    distance = round(distance / SENSORSAMPLES);
     //Let's check if distance is in range
-    if (distance > MAX_DISTANCE) {
+    if (distance >= HEIGHT) {
         //Ultrasonic sensor error
         Serial.println("Ultrasonic sensor range overflow. Please Check!");
+        waterLevel = 0;
         return;
     } else {
         //Everything seems fine...
@@ -116,10 +122,14 @@ void getDistance() {
 
 void getVolume(){
     liters = 0;
-    unsigned int volume = waterLevel * WIDTH * DEPTH;   //Volume in cubic centimeters
-    volume = round(volume / 1000000);                   //Now in cubic meters
-    liters = volume * 1000;                             //Liters of liquid
+    volume = 0;
+    volume = waterLevel * WIDTH;     //Volume in cubic centimeters
+    volume = volume * DEPTH;
+    //Serial.println(volume);
+    liters = volume / 1000;         //Liters of liquid
 
+    //Append the latest measure to litersHistory
+    
     //Send the data to the Serial port
     Serial.print("Volume: ");
     Serial.print(liters);
@@ -165,6 +175,7 @@ void saveDataSD() {
 
 void initSDCard () {
     //This function initializes the SD Card and stores some status
+    Serial.println("initializing the SD card");
     if (!SD.begin(SDCS)) {
       Serial.println("Card failed, or not present. Not logging data!");
       cardPresent = false;
@@ -185,7 +196,6 @@ void initSDCard () {
         }
         Serial.println("card initialized.");
       }
-
 }
 
 void printParameters () {
@@ -206,7 +216,7 @@ void printParameters () {
     Serial.println(TFT_RST);
 
     Serial.println("--------------------DEPOSIT PARAMETERS------------------");
-    Serial.print("DEPOSIT MEASURES (in meters): ");
+    Serial.print("DEPOSIT MEASURES (in centimeters): ");
     Serial.print("HEIGHT: ");
     Serial.print(HEIGHT);
     Serial.print(" WIDTH: ");
@@ -218,18 +228,19 @@ void printParameters () {
 
 /********************************* GRAPHIC FUNCTIONS **********************************/
 void welcomeText(){
-   screen = 0;
-   tft.fillScreen(WHITE);
-   tft.setCursor(10,10);
-   tft.setTextColor(BLACK);
-   tft.setTextSize(2);
-   tft.println("Nivel de Agua");
-   tft.println("en el Pozo");
+    Serial.println("Displaying the welcome text");
+    screen = 0;
+    tft.fillScreen(WHITE);
+    tft.setCursor(10,10);
+    tft.setTextColor(BLACK);
+    tft.setTextSize(2);
+    tft.println("Nivel de Agua");
+    tft.println("en el Pozo");
 
-   tft.setCursor(10, PIXEL_HEIGHT - 18);
-   tft.setTextSize(1);
-   tft.println("Version 0.9. Marc Cobler. 2015");
-   delay(2000);
+    tft.setCursor(10, PIXEL_HEIGHT - 18);
+    tft.setTextSize(1);
+    tft.println("Version 0.9. Marc Cobler. 2015");
+    delay(2000);
 }
 
 void mainScreen() {

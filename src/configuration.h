@@ -23,10 +23,16 @@ Modify the pins in order to adapt to your hardware
 #define LOGFILENAME "log.csv"
 
 //Set the Serial port communication speed
-#define SERIALSPEED 9600
+#define SERIALSPEED 115200
+
+//The number of samples taken when getting the distance
+#define SENSORSAMPLES 5
+
+//The number of samples stored to calculate flows and stuff
+#define HISTORY 10
 
 //Deposit measures in centimeters
-#define HEIGHT 200
+#define HEIGHT 250
 #define WIDTH 540
 #define DEPTH 180
 

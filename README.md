@@ -50,3 +50,4 @@ Libraries used in this project:
 - [x] Functions to calculate volume (*liters*)
 - [ ] Implement LIFO buffer to calculate flows
 - [x] configuration file to make it easy for other systems
+- [x] Configure Travis CI to deploy

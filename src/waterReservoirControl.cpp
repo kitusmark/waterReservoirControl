@@ -1,11 +1,11 @@
 //conversion from .ino to .cpp file
 #include <Arduino.h>
-#include <Sleep_n0m1.h>
+#include <Sleep_n0m1.h> //#412 in platformio
 #include <SD.h>
 #include <SPI.h>
-#include <Adafruit_ILI9341.h>
-#include <Adafruit_GFX.h>
-#include <NewPing.h>
+#include <Adafruit_ILI9341.h> //#571 in platformio
+#include <Adafruit_GFX.h> //#13 in platformio
+#include <NewPing.h> //#176 in platformio
 #include "configuration.h"
 /********************************************************************************************
 Marc Cobler Cosmen - March 2015

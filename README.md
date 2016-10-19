@@ -1,6 +1,8 @@
 waterReservoirControl
 ===========
 
+[![Build Status](https://travis-ci.org/kitusmark/waterReservoirControl.svg?branch=master)](https://travis-ci.org/kitusmark/waterReservoirControl)
+
 Code for an automated water level control system in a deposit or reservoir. Implemented with `arduino`.
 
 The idea is to pump water from a well to a reservoir and track the amount of water in it. The control panel of the pump has a system to activate or deactivate the pump, so I've used a couple of probes to notice the lowest and the highest level and a relay output to control the pump.

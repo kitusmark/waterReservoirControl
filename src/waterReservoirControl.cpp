@@ -1,3 +1,5 @@
+//conversion from .ino to .cpp file
+#include <Arduino.h>
 #include <Sleep_n0m1.h>
 #include <SD.h>
 #include <SPI.h>
@@ -17,6 +19,19 @@ contained. All the data is displayed in a TFT qvga 2,2" display and stored in a 
 We'll use the library NewPing.h from https://code.google.com/p/arduino-new-ping/ that converts to distance
 the pings from the ultrasonic sensor
 *********************************************************************************************/
+
+/*-------------------------FUNCTIONS DECLARATIONS-------------------------------------*/
+void getDistance();
+void getVolume();
+void getTimeStamp();
+void saveDataSD();
+void initSDCard();
+void printParameters();
+void welcomeText();
+void mainScree();
+void statisticsScreen();
+void updateScreen();
+/*------------------------------------------------------------------------------------*/
 //Go to configuration.h and select if Arduino Leonardo is used by commenting the #define
 #ifdef LEONARDO  //For the Arduino Leonardo or the micro
     Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
@@ -129,7 +144,7 @@ void getVolume(){
     liters = volume / 1000;         //Liters of liquid
 
     //Append the latest measure to litersHistory
-    
+
     //Send the data to the Serial port
     Serial.print("Volume: ");
     Serial.print(liters);

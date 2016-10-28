@@ -12,9 +12,9 @@ Modify the pins in order to adapt to your hardware
 
 /********************* PARAMETERS **************************/
 //Select the board you're using, comment the others
-#define MEGA         //Arduino Mega2560
+//#define MEGA         //Arduino Mega2560
 //#define LEONARDO   //All the boards based on the 32u4 microcrontroller
-//#define UNO        //Atmega168/328 based boards
+#define UNO        //Atmega168/328 based boards
 
 //Comment if you don't need to print the parameters during the start via serial port
 #define PARAMETERS
@@ -73,8 +73,7 @@ Modify the pins in order to adapt to your hardware
 
 /********************* PINS ********************************/
 // For the Adafruit shield, these are the default.
-#define TFT_DC 9
-#define TFT_CS 10
+
 
 #ifdef MEGA
     #define TFT_MOSI 51
@@ -82,6 +81,16 @@ Modify the pins in order to adapt to your hardware
     #define TFT_CLK 52
     #define TFT_RST 8
     #define TFT_CS 53
+    #define TFT_DC 9
+#endif
+
+#ifdef UNO
+    #define TFT_MOSI 11
+    #define TFT_MISO 12
+    #define TFT_CLK 13
+    #define TFT_RST 8
+    #define TFT_DC 9
+    #define TFT_CS 10
 #endif
 
 #ifdef LEONARDO  //For the Arduino Leonardo or the micro
@@ -89,6 +98,8 @@ Modify the pins in order to adapt to your hardware
     #define TFT_MISO 14
     #define TFT_CLK 15
     #define TFT_RST 8
+    #define TFT_CS 10
+    #define TFT_DC 9
 #endif
 
 //SD Card

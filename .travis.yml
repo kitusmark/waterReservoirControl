@@ -36,7 +36,7 @@ cache:
 install:
     - pip install -U platformio
     #install all the libraries needed to compile
-    - platformio lib -g install 412 571 13 176
+    - platformio lib -g install 412 176
 
 script:
     - platformio run -e megaatmega2560

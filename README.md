@@ -12,7 +12,7 @@ By doing that we can leave the system unattended and ensure an automatic irrigat
 
 The microcontroller's function is to monitor the water level every *X* seconds and store all the data in a SD card in order to process the data later in the computer or see the basic info on the system display.
 
-The future will be to implement an ESP8266 web server to view and get the data.
+The future will be to implement a WiFi module with a web server to get and display the data.
 
 ## Hardware
 
@@ -22,16 +22,22 @@ The future will be to implement an ESP8266 web server to view and get the data.
 In order to achieve the specifications, we need the following parts:
 
 + 12V power supply.
-+ Arduino UNO or MEGA. The code is also prepared for 32u4 based platforms.
++ Microcontroller. This code has been made for Arduino but It's easily portable.
 + Water Level Relay board.
-+ LCD display for data visualization.
++ LCD display for data visualization. I've selected a uLCD-35DT from 4D Systems.
 + SD card breakout.
 + Ultrasonic Distance Sensor.The basic HC-SR04.
-+ A couple of momentary push buttons to switch between menus.
 + RTC Module to track the time.
++ Switches, plugs and cables
 
 
-## Software
+## Firmware
+
+The firmware is organised within a PlatformIO project. `Lib` folder conains the libraries and the `src` folder contains the main code.
+
+You'll need to set some parameters under the `src/configuration.h` in order to work properly with your system. Everything is well documented. The firmware is compatible with **Arduino Mega, UNO and Leonardo**.
+
+Furthermore, I've configured this repository to work with Travis CI so the label at the top of this wiki shows the state of the compilation.
 
 ---
 Libraries used in this project:
@@ -41,6 +47,9 @@ Libraries used in this project:
 + SPI.h
 + Adafruit_ILI9341
 + Sleep_n0m1
++ SparkFun DS1307 Real Time Clock
++ Wire.h for I2C communications
++ genieArduino.h for 4D Systems uLCD Serial communications.
 
 
 ### To-Do
@@ -48,7 +57,9 @@ Libraries used in this project:
 - [x] Implement data system to store in the SD card
 - [x] Use SD library and code for that
 - [x] Implement Sleep mode of the ATmega
+- [x] Implement RTC Module. Based on the DS1307
 - [ ] Design the interface of the display and decide the menus
+- [ ] Code for the uLCD Display
 - [x] Functions to calculate volume (*liters*)
 - [ ] Implement LIFO buffer to calculate flows
 - [x] configuration file to make it easy for other systems

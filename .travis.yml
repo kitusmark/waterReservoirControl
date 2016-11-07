@@ -39,7 +39,7 @@ install:
     - platformio lib -g install 412 571 13 176
 
 script:
-    - platformio run
+    - platformio run -e megaatmega2560
 
 
 

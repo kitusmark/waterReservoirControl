@@ -12,9 +12,9 @@ Modify the pins in order to adapt to your hardware
 
 /********************* PARAMETERS **************************/
 //Select the board you're using, comment the others
-//#define MEGA         //Arduino Mega2560
+#define MEGA         //Arduino Mega2560
 //#define LEONARDO   //All the boards based on the 32u4 microcrontroller
-#define UNO        //Atmega168/328 based boards
+//#define UNO        //Atmega168/328 based boards
 
 //Comment if you don't need to print the parameters during the start via serial port
 #define PARAMETERS
@@ -41,6 +41,10 @@ Modify the pins in order to adapt to your hardware
 
 //Define sleeptime in miliseconds
 #define SLEEPTIME 300000  //Sleep for 5 min
+
+//Define if you want to set the time with the next compilation
+//This is just needed once. Then comment
+#define SETTIME
 
 //Display constants
 #define PIXEL_WIDTH 320
@@ -73,8 +77,6 @@ Modify the pins in order to adapt to your hardware
 
 /********************* PINS ********************************/
 // For the Adafruit shield, these are the default.
-
-
 #ifdef MEGA
     #define TFT_MOSI 51
     #define TFT_MISO 50
@@ -112,3 +114,17 @@ const int SDCS = 4; //Need to change because TFT is on the same CS pin
 //Pushbuttons for navigation and such
 #define NAVBUTTON 3
 #define BUTTON 4
+
+//RTC - Real Time Module pins
+#ifdef MEGA
+  #define RTCDATA 20
+  #define RTCCLOCK 21
+#endif
+#ifdef UNO
+  #define RTCDATA 18
+  #define RTCCLOCK 19
+#endif
+#ifdef LEONARDO
+  #define RTCDATA 2
+  #define RTCCLOCK 3
+#endif

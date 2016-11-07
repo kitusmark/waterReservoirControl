@@ -1,12 +1,19 @@
+// waterReservoirControl.cpp
+// Main code for the waterReservoirControl system
+// Author: Marc Cobler Cosmen (kitusmark)
+// https://github.com/kitusmark/waterReservoirControl
+
 //conversion from .ino to .cpp file
 #include <Arduino.h>
 #include <Sleep_n0m1.h> //#412 in platformio
 #include <SD.h>
 #include <SPI.h>
-#include <Adafruit_ILI9341.h> //#571 in platformio
-#include <Adafruit_GFX.h> //#13 in platformio
 #include <NewPing.h> //#176 in platformio
+#include <Wire.h>
+#include <SparkFunDS1307RTC.h>
+#include <genieArduino.h>
 #include "configuration.h"
+
 /********************************************************************************************
 Marc Cobler Cosmen - March 2015
 waterReservoirControl Project
@@ -21,30 +28,16 @@ the pings from the ultrasonic sensor
 *********************************************************************************************/
 
 /*-------------------------FUNCTIONS DECLARATIONS-------------------------------------*/
+void initSDCard();
+void initRTC();
+void printTime();
+void printParameters();
 void getDistance();
 void getVolume();
-void getTimeStamp();
+void getTime();
 void saveDataSD();
-void initSDCard();
-void printParameters();
-void welcomeText();
-void mainScree();
-void statisticsScreen();
-void updateScreen();
+
 /*------------------------------------------------------------------------------------*/
-//Go to configuration.h and select if Arduino Leonardo is used by commenting the #define
-#ifdef LEONARDO  //For the Arduino Leonardo or the micro
-    Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
-#endif
-
-#ifdef MEGA  //Only for the Uno
-    Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
-#endif
-
-#ifdef UNO
-    Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
-#endif
-
 //Creating a NewPing object
 NewPing sensor(TRIGGER, ECHO, MAX_DISTANCE);
 
@@ -56,7 +49,7 @@ uint8_t screen;     //Variable to track screens
 bool cardPresent;   //Variable to know if the SD card is present or not
 bool logFileExists; //Variable to know if the log file already exists
 
-String timeStamp;   //String to store the time from the RTC Module
+int timeStamp[7];   //int Array to store the time from the RTC Module
 String dataString;  //String to save the information to the SD card
 
 unsigned int waterLevel;    //Variable that stores the water level in meters
@@ -74,7 +67,7 @@ void setup()
     }
   #endif
 
-  Serial.println(F("Water Reservoir Monitoring Starting...!"));
+  Serial.println(F("Water Reservoir Monitoring Starting..."));
 
   //Init the litersHistory Array
   for (uint8_t i = 0; i < HISTORY; i++) {
@@ -84,24 +77,21 @@ void setup()
   #ifdef PARAMETERS
     printParameters();    //Uncomment #define PARAMETERS in configuration.h if you don't want to print this out
   #endif
-
   // make sure that the default chip select pin is set to
   // output, even if you don't use it:
   pinMode(SDCS, OUTPUT);
   // see if the card is present and can be initialized:
   initSDCard();
+  // Init the RTC Module
+  initRTC();
 
-  Serial.println("Initializing the TFT Display");
-  tft.begin();
-  tft.setRotation(1); //Set the display in landscape mode
-  //welcomeText();
-  //mainScreen();
+  Serial.println("Initializing the Display...");
 }
 //--------------------------------------------------------
 void loop()
 {
   delay(1000);
-  //getTime();
+  getTime();
   getDistance();
   getVolume();
   //saveDataSD();
@@ -155,17 +145,32 @@ void getVolume(){
     Serial.println(" liters");
 }
 
-void getTimeStamp() {
- //function that gets the time and date from a RTC Module
- //and stores the time stamps in timeStamp
+void getTime() {
+  //function that gets the time and date from a RTC Module
+  //and stores the time stamps in timeStamp
+  rtc.update(); // Update RTC data
+  // Read the time and store it in the timeStamp Array:
+  timeStamp[0] = rtc.second();
+  timeStamp[1] = rtc.minute();
+  timeStamp[2] = rtc.hour();
+
+  // Read the day/date:
+  timeStamp[3] = rtc.day();
+  timeStamp[4] = rtc.date();
+  timeStamp[5] = rtc.month();
+  timeStamp[6] = rtc.year();
+
+  printTime();
 }
 
 void saveDataSD() {
     if (cardPresent && logFileExists) {      //The SD card is present and we can log
         dataString = "";
         //First we get the time & date
-        dataString += timeStamp;
-        dataString += ",";
+        for (size_t i = 0; i < 7; i++) {
+          dataString += timeStamp[i];
+          dataString += ",";
+        }
         //Then we get the water level and the liters
         dataString += String(waterLevel);
         dataString += ",";
@@ -217,10 +222,49 @@ void initSDCard () {
       }
 }
 
+void printTime() {
+  rtc.update();
+  Serial.print(String(rtc.hour()) + ":"); // Print hour
+  if (rtc.minute() < 10)
+    Serial.print('0'); // Print leading '0' for minute
+  Serial.print(String(rtc.minute()) + ":"); // Print minute
+  if (rtc.second() < 10)
+    Serial.print('0'); // Print leading '0' for second
+  Serial.print(String(rtc.second())); // Print second
+
+  if (rtc.is12Hour()) // If we're in 12-hour mode
+  {
+    // Use rtc.pm() to read the AM/PM state of the hour
+    if (rtc.pm()) Serial.print(" PM"); // Returns true if PM
+    else Serial.print(" AM");
+  }
+  Serial.print(" | ");
+  // Few options for printing the day, pick one:
+  Serial.print(rtc.dayStr()); // Print day string
+  //Serial.print(rtc.dayC()); // Print day character
+  //Serial.print(rtc.day()); // Print day integer (1-7, Sun-Sat)
+  Serial.print(" - ");
+  Serial.print(String(rtc.date()) + "/" +    // (or) print date
+                   String(rtc.month()) + "/"); // Print month
+  Serial.println(String(rtc.year()));        // Print year
+}
+
+void initRTC() {
+  rtc.begin();
+  // Let's set the time & date with the compilation timeStamp
+  #ifdef SETTIME
+    rtc.autoTime();
+  #endif
+  //Fill the timeStamp
+  getTime();
+  // Print the time to see if it works properly
+  printTime();
+}
+
 void printParameters () {
     //This function prints some of the parameters in the configuration.h file
     Serial.println();
-    Serial.println("Your parameters are the following. Please modify them under configuration.h and rebuild.");
+    Serial.println("These are the parameters. Please modify them under configuration.h and rebuild.");
     Serial.println();
     Serial.println("-------------------TFT DISPLAY--------------------");
     Serial.print("TFT_MISO: ");
@@ -246,51 +290,3 @@ void printParameters () {
 }
 
 /********************************* GRAPHIC FUNCTIONS **********************************/
-void welcomeText(){
-    Serial.println("Displaying the welcome text");
-    screen = 0;
-    tft.fillScreen(WHITE);
-    tft.setCursor(10,10);
-    tft.setTextColor(BLACK);
-    tft.setTextSize(2);
-    tft.println("Nivel de Agua");
-    tft.println("en el Pozo");
-
-    tft.setCursor(10, PIXEL_HEIGHT - 18);
-    tft.setTextSize(1);
-    tft.println("Version 0.9. Marc Cobler. 2015");
-    delay(2000);
-}
-
-void mainScreen() {
-  screen = 1;
-  tft.fillScreen(WHITE);
-  uint8_t waterLevel = 75;
-
-  //let's draw the deposit itself with some rectangles!
-  tft.fillRect(DEPOSIT_FIG1_X,DEPOSIT_FIG1_Y,DEPOSIT_FIG1_WIDTH, DEPOSIT_FIG1_HEIGHT,BLACK); //Left side
-  tft.fillRect(DEPOSIT_FIG1_X,DEPOSIT_FIG2_Y,DEPOSIT_FIG2_WIDTH,DEPOSIT_FIG1_WIDTH,BLACK); //bottom side
-  tft.fillRect(DEPOSIT_FIG3_X,DEPOSIT_FIG1_Y,DEPOSIT_FIG1_WIDTH,DEPOSIT_FIG1_HEIGHT,BLACK); //right side
-
-  //Now let's draw the water inside the deposit
-  tft.fillRect(VOLUME_POSITION_X,waterLevel,VOLUME_WIDTH,(VOLUME_HEIGHT - waterLevel) + DEPOSIT_FIG1_Y,BLUE);
-
-  //Water level in percentage
-  tft.setCursor(DEPOSIT_FIG3_X + 25,DEPOSIT_FIG1_Y);
-  tft.setTextSize(2);
-  tft.setTextColor(BLACK);
-  tft.print("Capacidad al ");
-  tft.setCursor(195,66);
-  tft.setTextSize(3);
-  tft.print(75);
-  tft.println("%");
-}
-
-void statisticsScreen() {
-  screen = 2;
-  tft.fillScreen(WHITE);
-}
-
-void updateScreen (uint8_t screen) {    //Function that updates the screen periodycally
-
-}

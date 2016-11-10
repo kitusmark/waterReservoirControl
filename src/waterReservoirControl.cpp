@@ -1,7 +1,10 @@
 // waterReservoirControl.cpp
 // Main code for the waterReservoirControl system
+//Water level sensing in well deposits with Ultrasonic HC-SR04 sensor.
 // Author: Marc Cobler Cosmen (kitusmark)
 // https://github.com/kitusmark/waterReservoirControl
+//Obtaining the distance of the surface and knowing the measures of the deposit, we can calculate the volume of water
+//contained. All the data is displayed in a TFT qvga 2,2" display and stored in a SD card for datalogging.
 
 //conversion from .ino to .cpp file
 #include <Arduino.h>
@@ -14,18 +17,6 @@
 #include <genieArduino.h>
 #include "configuration.h"
 
-/********************************************************************************************
-Marc Cobler Cosmen - March 2015
-waterReservoirControl Project
-Water level sensing in well deposits.
-Ultrasonic HC-SR04 sensor.
-
-Obtaining the distance of the surface and knowing the measures of the deposit, we can calculate the volume of water
-contained. All the data is displayed in a TFT qvga 2,2" display and stored in a SD card for datalogging.
-
-We'll use the library NewPing.h from https://code.google.com/p/arduino-new-ping/ that converts to distance
-the pings from the ultrasonic sensor
-*********************************************************************************************/
 
 /*-------------------------FUNCTIONS DECLARATIONS-------------------------------------*/
 void initSDCard();

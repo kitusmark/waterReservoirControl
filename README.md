@@ -58,6 +58,7 @@ Libraries used in this project:
 - [x] Use SD library and code for that
 - [x] Implement Sleep mode of the ATmega
 - [x] Implement RTC Module. Based on the DS1307
+- [ ] Add SerialUI library to interface via Serial Port
 - [ ] Design the interface of the display and decide the menus
 - [ ] Code for the uLCD Display
 - [x] Functions to calculate volume (*liters*)

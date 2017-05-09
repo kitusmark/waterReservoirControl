@@ -1,7 +1,7 @@
 #include "configuration.h"
 #include <ESP8266WiFi.h>
 
-#include <SparkFunDS1307RTC.h>
+#include <SparkFunDS1307RTC.h> //https://github.com/sparkfun/SparkFun_DS1307_RTC_Arduino_Library
 #include <SD.h>
 #include <Wire.h>
 //Webserver stuff

@@ -36,10 +36,11 @@ cache:
 install:
     - pip install -U platformio
     #install all the libraries needed to compile
-    - platformio lib -g install 412 176
+    - wget https://github.com/sparkfun/SparkFun_DS1307_RTC_Arduino_Library/archive/master.zip -O /tmp/SparkFun_DS1307_RTC_Arduino_Library.zip
+    - unzip /tmp/SparkFun_DS1307_RTC_Arduino_Library.zip -d /tmp
 
 script:
-    - platformio run -e megaatmega2560
+    - platformio ci --lib="." --lib="/tmp/SparkFun_DS1307_RTC_Arduino_Library-master" --board=nodemcuv2
 
 
 

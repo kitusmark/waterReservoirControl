@@ -1,123 +1,116 @@
-// waterReservoirControl.cpp
-// Main code for the waterReservoirControl system
-//Water level sensing in well deposits with Ultrasonic HC-SR04 sensor.
-// Author: Marc Cobler Cosmen (kitusmark)
-// https://github.com/kitusmark/waterReservoirControl
-//Obtaining the distance of the surface and knowing the measures of the deposit, we can calculate the volume of water
-//contained. All the data is displayed in a TFT qvga 2,2" display and stored in a SD card for datalogging.
-
-//conversion from .ino to .cpp file
-#include <Arduino.h>
-#include <Sleep_n0m1.h> //#412 in platformio
-#include <SD.h>
-#include <SPI.h>
-#include <NewPing.h> //#176 in platformio
-#include <Wire.h>
-#include <SparkFunDS1307RTC.h>
-#include <genieArduino.h>
 #include "configuration.h"
+#include <ESP8266WiFi.h>
 
-
-/*-------------------------FUNCTIONS DECLARATIONS-------------------------------------*/
-void initSDCard();
-void initRTC();
-void printTime();
-void printParameters();
-void getDistance();
-void getVolume();
-void getTime();
-void saveDataSD();
-
-/*------------------------------------------------------------------------------------*/
-//Creating a NewPing object
-NewPing sensor(TRIGGER, ECHO, MAX_DISTANCE);
-
-//Creating a Sleep object
-Sleep sleep;
+#include <SparkFunDS1307RTC.h>
+#include <SD.h>
+#include <Wire.h>
+//Webserver stuff
+IPAddress local_IP(192,168,1,1);
+IPAddress gateway(192,168,1,0);
+IPAddress subnet(255,255,255,0);
+//Creating the server object
+WiFiServer server(webServerPort);
 
 //************** Program variables *******************************
-uint8_t screen;     //Variable to track screens
 bool cardPresent;   //Variable to know if the SD card is present or not
 bool logFileExists; //Variable to know if the log file already exists
 
 int timeStamp[7];   //int Array to store the time from the RTC Module
+String timeStampString;
 String dataString;  //String to save the information to the SD card
 
 unsigned int waterLevel;    //Variable that stores the water level in meters
 unsigned int liters;        //Variable that stores the amount of water in liters
 unsigned long volume;       //Varible that stores the amount of water in cubic centimenters. MAX volume is HEIGHT*WIDTH*DEPTH
-unsigned int litersHistory[HISTORY];
 
-//--------------------------------------------------------
 void setup()
 {
-  Serial.begin(SERIALSPEED); //More than enough
-  #ifdef LEONARDO
-    while (!Serial) {
-     ;    //Wait and do nothing... 32u4 microcrontroller only
-    }
-  #endif
-
-  Serial.println(F("Water Reservoir Monitoring Starting..."));
-
-  //Init the litersHistory Array
-  for (uint8_t i = 0; i < HISTORY; i++) {
-      litersHistory[i] = 0;
-  }
-
-  #ifdef PARAMETERS
-    printParameters();    //Uncomment #define PARAMETERS in configuration.h if you don't want to print this out
-  #endif
-  // make sure that the default chip select pin is set to
-  // output, even if you don't use it:
+  ESP.wdtDisable();
+  Serial.begin(SERIALSPEED);
+  Serial.println(" ");
+  Serial.println("Water Reservoir Monitoring Starting...");
   pinMode(SDCS, OUTPUT);
   // see if the card is present and can be initialized:
   initSDCard();
+  yield();
   // Init the RTC Module
   initRTC();
-
-  Serial.println("Initializing the Display...");
+  yield();
+  //Init server
+  initSoftAP();
+  initWebServer();
+  yield();
+  ESP.wdtEnable(WDTO_8S);
 }
-//--------------------------------------------------------
+
 void loop()
 {
-  delay(1000);
+  handleClient();
   getTime();
-  getDistance();
+  // getDistance();
   getVolume();
-  //saveDataSD();
-  //sleep.pwrDownMode();  //set sleep mode
-  //sleep.sleepDelay(SLEEPTIME);
+  saveDataSD();
+  delay(1000);
 }
-//--------------------------------------------------------
-void getDistance() {
-    unsigned int distance = 0;
-    waterLevel = 0;
-    for (uint8_t i = 0; i < SENSORSAMPLES; i++) {       //Let's average out the signal
-      unsigned int time = sensor.ping();    //get the time of a pulse in microseconds
-      distance += time / US_ROUNDTRIP_CM;   //Convert to centimeters
-      delay(30);                            //Specified by the library
+
+//------------------------WEBSERVER FUNCTIONS---------------------------
+void initSoftAP() {
+  Serial.print("Setting Soft-AP configuration...");
+  Serial.println(WiFi.softAPConfig(local_IP, gateway, subnet) ? "Ready" : "Failed!");
+  Serial.print("Starting the WiFi module as SOFT AP...");
+  Serial.println(WiFi.softAP(ssid, password) ? "Ready" : "Failed!");
+  Serial.print("Soft-AP IP address = ");
+  Serial.println(WiFi.softAPIP());
+}
+void getClientsConnected() {
+  Serial.printf("Stations connected = %d\n", WiFi.softAPgetStationNum());
+}
+void initWebServer() {
+  server.begin();
+}
+void handleClient() {
+  WiFiClient client = server.available();
+  // wait for a client (web browser) to connect
+  if (client)
+  {
+    Serial.println("\n[Client connected]");
+    while (client.connected())
+    {
+      // read line by line what the client (web browser) is requesting
+      if (client.available())
+      {
+        String line = client.readStringUntil('\r');
+        Serial.print(line);
+        // wait for end of client's request, that is marked with an empty line
+        if (line.length() == 1 && line[0] == '\n')
+        {
+          client.println(prepareHtmlPage());
+          break;
+        }
+      }
     }
-
-    distance = round(distance / SENSORSAMPLES);
-    //Let's check if distance is in range
-    if (distance >= HEIGHT) {
-        //Ultrasonic sensor error
-        Serial.println("Ultrasonic sensor range overflow. Please Check!");
-        waterLevel = 0;
-        return;
-    } else {
-        //Everything seems fine...
-        waterLevel = HEIGHT - distance;
-    }
-
-    Serial.print("Distance: ");
-    Serial.print(distance);
-    Serial.println(" cm");
-
-    Serial.print("Water Level: ");  //Water height display
-    Serial.print(waterLevel);
-    Serial.println(" cm");
+    delay(1); // give the web browser time to receive the data
+    // close the connection:
+    client.stop();
+    Serial.println("[Client disonnected]");
+  }
+}
+//--------------------------USER FUNCTIONS-------------------------------
+String prepareHtmlPage()  {
+  String htmlPage =
+     String("HTTP/1.1 200 OK\r\n") +
+            "Content-Type: text/html\r\n" +
+            "Connection: close\r\n" +  // the connection will be closed after completion of the response
+            "Refresh: 5\r\n" +  // refresh the page automatically every 5 sec
+            "\r\n" +
+            "<!DOCTYPE HTML>" +
+            "<html>" +
+            "Welcome to the Water Reservoir Control Server! \r\n" +
+            "Current time is: " + timeStampString + "\r\n" +
+            "The deposit has: " + String(liters) + " liters" "\r\n" +
+            "</html>" +
+            "\r\n";
+  return htmlPage;
 }
 
 void getVolume(){
@@ -135,7 +128,7 @@ void getVolume(){
     Serial.print(liters);
     Serial.println(" liters");
 }
-
+//
 void getTime() {
   //function that gets the time and date from a RTC Module
   //and stores the time stamps in timeStamp
@@ -151,9 +144,13 @@ void getTime() {
   timeStamp[5] = rtc.month();
   timeStamp[6] = rtc.year();
 
+  for (size_t i = 0; i < 7; i++) {
+    timeStampString += timeStamp[i];
+  }
+
   printTime();
 }
-
+//
 void saveDataSD() {
     if (cardPresent && logFileExists) {      //The SD card is present and we can log
         dataString = "";
@@ -187,7 +184,7 @@ void saveDataSD() {
         initSDCard();
     }
 }
-
+//
 void initSDCard () {
     //This function initializes the SD Card and stores some status
     Serial.println("initializing the SD card");
@@ -212,7 +209,7 @@ void initSDCard () {
         Serial.println("card initialized.");
       }
 }
-
+//
 void printTime() {
   rtc.update();
   Serial.print(String(rtc.hour()) + ":"); // Print hour
@@ -231,7 +228,7 @@ void printTime() {
   }
   Serial.print(" | ");
   // Few options for printing the day, pick one:
-  Serial.print(rtc.dayStr()); // Print day string
+  //Serial.print(rtc.dayStr()); // Print day string
   //Serial.print(rtc.dayC()); // Print day character
   //Serial.print(rtc.day()); // Print day integer (1-7, Sun-Sat)
   Serial.print(" - ");
@@ -251,24 +248,12 @@ void initRTC() {
   // Print the time to see if it works properly
   printTime();
 }
-
+//
 void printParameters () {
     //This function prints some of the parameters in the configuration.h file
     Serial.println();
     Serial.println("These are the parameters. Please modify them under configuration.h and rebuild.");
     Serial.println();
-    Serial.println("-------------------TFT DISPLAY--------------------");
-    Serial.print("TFT_MISO: ");
-    Serial.println(TFT_MISO);
-    Serial.print("TFT_MOSI: ");
-    Serial.println(TFT_MOSI);
-    Serial.print("TFT_CLK: ");
-    Serial.println(TFT_CLK);
-    Serial.print("TFT_CS: ");
-    Serial.println(TFT_CS);
-    Serial.print("TFT_RST: ");
-    Serial.println(TFT_RST);
-
     Serial.println("--------------------DEPOSIT PARAMETERS------------------");
     Serial.print("DEPOSIT MEASURES (in centimeters): ");
     Serial.print("HEIGHT: ");
@@ -277,7 +262,4 @@ void printParameters () {
     Serial.print(WIDTH);
     Serial.print(" DEPTH: ");
     Serial.println(DEPTH);
-
 }
-
-/********************************* GRAPHIC FUNCTIONS **********************************/

@@ -1,5 +1,8 @@
 #include "configuration.h"
 #include <ESP8266WiFi.h>
+#include <ESP8266mDNS.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266HTTPUpdateServer.h>
 
 #include <SparkFunDS1307RTC.h> //https://github.com/sparkfun/SparkFun_DS1307_RTC_Arduino_Library
 #include <SD.h>
@@ -10,6 +13,8 @@ IPAddress gateway(192,168,1,0);
 IPAddress subnet(255,255,255,0);
 //Creating the server object
 WiFiServer server(webServerPort);
+ESP8266WebServer httpServer(webServerPort);
+ESP8266HTTPUpdateServer httpUpdater;
 
 //************** Program variables *******************************
 bool cardPresent;   //Variable to know if the SD card is present or not
@@ -38,6 +43,8 @@ void setup()
   yield();
   //Init server
   initSoftAP();
+  initMDNSServer();
+  initOTAServer();
   initWebServer();
   yield();
   ESP.wdtEnable(WDTO_8S);
@@ -50,7 +57,7 @@ void loop()
   // getDistance();
   getVolume();
   saveDataSD();
-  delay(1000);
+  delay(5000);
 }
 
 //------------------------WEBSERVER FUNCTIONS---------------------------
@@ -68,6 +75,27 @@ void getClientsConnected() {
 void initWebServer() {
   server.begin();
 }
+void initMDNSServer() {
+  if (!MDNS.begin(hostnameMDNS)) {
+    Serial.println("Error setting up MDNS responder!");
+    while(1) {
+      delay(1000);
+      //mDNS server not working
+    }
+  }
+  //The mDNS server has been started correctly
+  Serial.println("mDNS responder started correctly");
+  //Add a service to mDNS-SD
+  MDNS.addService("http", "tcp", webServerPort);
+}
+
+void initOTAServer() {
+  Serial.println("initializing the http OTA Server...");
+  httpUpdater.setup(&httpServer, updatePath, updateUsername, updatePassword);
+  httpServer.begin();
+  Serial.printf("HTTPUpdateServer ready! Open http://%s.local%s in your browser and login \n", hostnameMDNS, updatePath);
+}
+
 void handleClient() {
   WiFiClient client = server.available();
   // wait for a client (web browser) to connect

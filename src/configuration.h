@@ -9,12 +9,17 @@ Configuration File
 Modify the parameters in order to adapt the code to your system
 Modify the pins in order to adapt to your hardware
 ###################################################################*/
-// webserver values and definitions
-const char* ssid = "Deposit";
-const char* password = "12345678910";
+// webserver Soft-AP values and definitions
+const char* ssid = "WRC";
+const char* password = "123456789";
 const int channel = 11;
 const bool hidden = false;
-
+//Credentials for updating the firmware
+const char* updatePath = "/update";
+const char* updateUsername = "admin";
+const char* updatePassword = "admin";
+//mDNS definitions
+const char* hostnameMDNS = "wrc";
 const int webServerPort = 80;
 //Comment if you don't need to print the parameters during the start via serial port
 #define PARAMETERS

@@ -15,6 +15,8 @@ IPAddress subnet(255,255,255,0);
 WiFiServer server(webServerPort);
 ESP8266WebServer httpServer(webServerPort);
 ESP8266HTTPUpdateServer httpUpdater;
+//Some ESP stuff
+ADC_MODE(ADC_VCC);
 
 //************** Program variables *******************************
 bool cardPresent;   //Variable to know if the SD card is present or not
@@ -32,6 +34,8 @@ void setup()
 {
   ESP.wdtDisable();
   Serial.begin(SERIALSPEED);
+  delay(50);
+  Serial.println("BOOTLOADER GARBAGE...");
   Serial.println(" ");
   Serial.println("Water Reservoir Monitoring Starting...");
   pinMode(SDCS, OUTPUT);
@@ -41,6 +45,8 @@ void setup()
   // Init the RTC Module
   initRTC();
   yield();
+  //Get information of the ESP8266 Module
+  printModuleInfo();
   //Init server
   initSoftAP();
   initMDNSServer();
@@ -139,6 +145,25 @@ String prepareHtmlPage()  {
             "</html>" +
             "\r\n";
   return htmlPage;
+}
+
+void printModuleInfo() {
+  Serial.println("ESP8266 Module info: ");
+  Serial.print(" - Flash Chip ID: ");
+  Serial.println(ESP.getFlashChipId());
+  Serial.print(" - Flash Chip Size: ");
+  Serial.print(ESP.getFlashChipSize()/1024);
+  Serial.println(" MB");
+  Serial.print(" - Flash Chip Real Size: ");
+  Serial.print(ESP.getFlashChipRealSize()/1024);
+  Serial.println(" MB");
+  Serial.print(" - Flash Chip Speed: ");
+  Serial.print(ESP.getFlashChipSpeed()/1000000);
+  Serial.println(" MHz");
+  //Read the VCC Supply Voltage
+  Serial.print(" - VCC Voltage: ");
+  Serial.print(ESP.getVcc());
+  Serial.println(" mV");
 }
 
 void getVolume(){

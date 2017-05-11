@@ -1,3 +1,20 @@
+// WRCWebServer.ino - Water Reservoir Control Web Server
+// Main code for the waterReservoirControl system based on the nodemcuv2 ESP8266
+//Water level sensing in well deposits with Ultrasonic HC-SR04 sensor and.
+// Author: Marc Cobler Cosmen (@kitusmark)
+// https://github.com/kitusmark/waterReservoirControl
+//Obtaining the distance of the surface and knowing the measures of the deposit, we can calculate the volume of water
+//contained. All the data is served in a simple webpage and stored in a SD card for datalogging.
+//Comment to disable Serial debug
+#define LOG
+#ifdef LOG
+  #define log(...) Serial.print(__VA_ARGS__)
+  #define logln(...) Serial.println(__VA_ARGS__)
+#else
+  #define log(...)
+  #define logln(...)
+#endif
+
 #include "configuration.h"
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
@@ -35,9 +52,9 @@ void setup()
   ESP.wdtDisable();
   Serial.begin(SERIALSPEED);
   delay(50);
-  Serial.println("BOOTLOADER GARBAGE...");
-  Serial.println(" ");
-  Serial.println("Water Reservoir Monitoring Starting...");
+  logln("BOOTLOADER GARBAGE...");
+  logln(" ");
+  logln("Water Reservoir Monitoring Starting...");
   pinMode(SDCS, OUTPUT);
   // see if the card is present and can be initialized:
   initSDCard();
@@ -68,38 +85,38 @@ void loop()
 
 //------------------------WEBSERVER FUNCTIONS---------------------------
 void initSoftAP() {
-  Serial.print("Setting Soft-AP configuration...");
-  Serial.println(WiFi.softAPConfig(local_IP, gateway, subnet) ? "Ready" : "Failed!");
-  Serial.print("Starting the WiFi module as SOFT AP...");
-  Serial.println(WiFi.softAP(ssid, password) ? "Ready" : "Failed!");
-  Serial.print("Soft-AP IP address = ");
-  Serial.println(WiFi.softAPIP());
+  log("Setting Soft-AP configuration...");
+  logln(WiFi.softAPConfig(local_IP, gateway, subnet) ? "Ready" : "Failed!");
+  log("Starting the WiFi module as SOFT AP...");
+  logln(WiFi.softAP(ssid, password) ? "Ready" : "Failed!");
+  log("Soft-AP IP address = ");
+  logln(WiFi.softAPIP());
 }
 void getClientsConnected() {
-  Serial.printf("Stations connected = %d\n", WiFi.softAPgetStationNum());
+  printf("Stations connected = %d\n", WiFi.softAPgetStationNum());
 }
 void initWebServer() {
   server.begin();
 }
 void initMDNSServer() {
   if (!MDNS.begin(hostnameMDNS)) {
-    Serial.println("Error setting up MDNS responder!");
+    logln("Error setting up MDNS responder!");
     while(1) {
       delay(1000);
       //mDNS server not working
     }
   }
   //The mDNS server has been started correctly
-  Serial.println("mDNS responder started correctly");
+  logln("mDNS responder started correctly");
   //Add a service to mDNS-SD
   MDNS.addService("http", "tcp", webServerPort);
 }
 
 void initOTAServer() {
-  Serial.println("initializing the http OTA Server...");
+  logln("initializing the http OTA Server...");
   httpUpdater.setup(&httpServer, updatePath, updateUsername, updatePassword);
   httpServer.begin();
-  Serial.printf("HTTPUpdateServer ready! Open http://%s.local%s in your browser and login \n", hostnameMDNS, updatePath);
+  printf("HTTPUpdateServer ready! Open http://%s.local%s in your browser and login \n", hostnameMDNS, updatePath);
 }
 
 void handleClient() {
@@ -107,14 +124,14 @@ void handleClient() {
   // wait for a client (web browser) to connect
   if (client)
   {
-    Serial.println("\n[Client connected]");
+    logln("\n[Client connected]");
     while (client.connected())
     {
       // read line by line what the client (web browser) is requesting
       if (client.available())
       {
         String line = client.readStringUntil('\r');
-        Serial.print(line);
+        log(line);
         // wait for end of client's request, that is marked with an empty line
         if (line.length() == 1 && line[0] == '\n')
         {
@@ -126,7 +143,7 @@ void handleClient() {
     delay(1); // give the web browser time to receive the data
     // close the connection:
     client.stop();
-    Serial.println("[Client disonnected]");
+    logln("[Client disonnected]");
   }
 }
 //--------------------------USER FUNCTIONS-------------------------------
@@ -148,22 +165,22 @@ String prepareHtmlPage()  {
 }
 
 void printModuleInfo() {
-  Serial.println("ESP8266 Module info: ");
-  Serial.print(" - Flash Chip ID: ");
-  Serial.println(ESP.getFlashChipId());
-  Serial.print(" - Flash Chip Size: ");
-  Serial.print(ESP.getFlashChipSize()/1024);
-  Serial.println(" MB");
-  Serial.print(" - Flash Chip Real Size: ");
-  Serial.print(ESP.getFlashChipRealSize()/1024);
-  Serial.println(" MB");
-  Serial.print(" - Flash Chip Speed: ");
-  Serial.print(ESP.getFlashChipSpeed()/1000000);
-  Serial.println(" MHz");
+  logln("ESP8266 Module info: ");
+  log(" - Flash Chip ID: ");
+  logln(ESP.getFlashChipId());
+  log(" - Flash Chip Size: ");
+  log(ESP.getFlashChipSize()/1024);
+  logln(" MB");
+  log(" - Flash Chip Real Size: ");
+  log(ESP.getFlashChipRealSize()/1024);
+  logln(" MB");
+  log(" - Flash Chip Speed: ");
+  log(ESP.getFlashChipSpeed()/1000000);
+  logln(" MHz");
   //Read the VCC Supply Voltage
-  Serial.print(" - VCC Voltage: ");
-  Serial.print(ESP.getVcc());
-  Serial.println(" mV");
+  log(" - VCC Voltage: ");
+  log(ESP.getVcc());
+  logln(" mV");
 }
 
 void getVolume(){
@@ -171,15 +188,15 @@ void getVolume(){
     volume = 0;
     volume = waterLevel * WIDTH;     //Volume in cubic centimeters
     volume = volume * DEPTH;
-    //Serial.println(volume);
+    //logln(volume);
     liters = volume / 1000;         //Liters of liquid
 
     //Append the latest measure to litersHistory
 
     //Send the data to the Serial port
-    Serial.print("Volume: ");
-    Serial.print(liters);
-    Serial.println(" liters");
+    log("Volume: ");
+    log(liters);
+    logln(" liters");
 }
 //
 void getTime() {
@@ -226,12 +243,12 @@ void saveDataSD() {
           logFile.println(dataString);
           logFile.close();
           // print to the serial port too:
-          Serial.println(dataString);
+          logln(dataString);
         }
         // if the file isn't open, pop up an error:
         else {
-          Serial.print("error opening ");
-          Serial.println(LOGFILENAME);
+          log("error opening ");
+          logln(LOGFILENAME);
         }
     } else {      //The SD card is not present. Let's try and initialize again
         initSDCard();
@@ -240,54 +257,54 @@ void saveDataSD() {
 //
 void initSDCard () {
     //This function initializes the SD Card and stores some status
-    Serial.println("initializing the SD card");
+    logln("initializing the SD card");
     if (!SD.begin(SDCS)) {
-      Serial.println("Card failed, or not present. Not logging data!");
+      logln("Card failed, or not present. Not logging data!");
       cardPresent = false;
     } else {
         cardPresent = true;
         if (SD.exists(LOGFILENAME)) {
             //the log file already exists
-            Serial.print("the log file ");
-            Serial.print(LOGFILENAME);
-            Serial.println(" already exists");
+            log("the log file ");
+            log(LOGFILENAME);
+            logln(" already exists");
             logFileExists = true;
         } else {
           //the log file does not exists
-          Serial.println("The log file does NOT exists. Creating it...");
+          logln("The log file does NOT exists. Creating it...");
           File logFile = SD.open(LOGFILENAME, FILE_WRITE);
           logFile.close();
-          Serial.println("Log file created.");
+          logln("Log file created.");
         }
-        Serial.println("card initialized.");
+        logln("card initialized.");
       }
 }
 //
 void printTime() {
   rtc.update();
-  Serial.print(String(rtc.hour()) + ":"); // Print hour
+  log(String(rtc.hour()) + ":"); // Print hour
   if (rtc.minute() < 10)
-    Serial.print('0'); // Print leading '0' for minute
-  Serial.print(String(rtc.minute()) + ":"); // Print minute
+    log('0'); // Print leading '0' for minute
+  log(String(rtc.minute()) + ":"); // Print minute
   if (rtc.second() < 10)
-    Serial.print('0'); // Print leading '0' for second
-  Serial.print(String(rtc.second())); // Print second
+    log('0'); // Print leading '0' for second
+  log(String(rtc.second())); // Print second
 
   if (rtc.is12Hour()) // If we're in 12-hour mode
   {
     // Use rtc.pm() to read the AM/PM state of the hour
-    if (rtc.pm()) Serial.print(" PM"); // Returns true if PM
-    else Serial.print(" AM");
+    if (rtc.pm()) log(" PM"); // Returns true if PM
+    else log(" AM");
   }
-  Serial.print(" | ");
+  log(" | ");
   // Few options for printing the day, pick one:
-  //Serial.print(rtc.dayStr()); // Print day string
-  //Serial.print(rtc.dayC()); // Print day character
-  //Serial.print(rtc.day()); // Print day integer (1-7, Sun-Sat)
-  Serial.print(" - ");
-  Serial.print(String(rtc.date()) + "/" +    // (or) print date
+  //log(rtc.dayStr()); // Print day string
+  //log(rtc.dayC()); // Print day character
+  //log(rtc.day()); // Print day integer (1-7, Sun-Sat)
+  log(" - ");
+  log(String(rtc.date()) + "/" +    // (or) print date
                    String(rtc.month()) + "/"); // Print month
-  Serial.println(String(rtc.year()));        // Print year
+  logln(String(rtc.year()));        // Print year
 }
 
 void initRTC() {
@@ -304,15 +321,15 @@ void initRTC() {
 //
 void printParameters () {
     //This function prints some of the parameters in the configuration.h file
-    Serial.println();
-    Serial.println("These are the parameters. Please modify them under configuration.h and rebuild.");
-    Serial.println();
-    Serial.println("--------------------DEPOSIT PARAMETERS------------------");
-    Serial.print("DEPOSIT MEASURES (in centimeters): ");
-    Serial.print("HEIGHT: ");
-    Serial.print(HEIGHT);
-    Serial.print(" WIDTH: ");
-    Serial.print(WIDTH);
-    Serial.print(" DEPTH: ");
-    Serial.println(DEPTH);
+    logln();
+    logln("These are the parameters. Please modify them under configuration.h and rebuild.");
+    logln();
+    logln("--------------------DEPOSIT PARAMETERS------------------");
+    log("DEPOSIT MEASURES (in centimeters): ");
+    log("HEIGHT: ");
+    log(HEIGHT);
+    log(" WIDTH: ");
+    log(WIDTH);
+    log(" DEPTH: ");
+    logln(DEPTH);
 }

@@ -33,6 +33,9 @@ cache:
     directories:
         - "~/.platformio"
 
+env:
+    - PLATFORMIO_CI_SRC=src/WRCWebServer.ino
+
 install:
     - pip install -U platformio
     #install all the libraries needed to compile

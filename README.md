@@ -54,8 +54,8 @@ Libraries used in this project:
 - [ ] Design the interface for the webpage
 - [x] Functions to calculate volume (*liters*)
 - [ ] Implement LIFO buffer to calculate flows
-- [ ] Implement OTA updates for the ESP8266
-- [ ] Implement mDNS server
+- [x] Implement OTA updates for the ESP8266
+- [x] Implement mDNS server
 - [ ] Implement File System for the ESP8266
 - [x] configuration file to make it easy for other systems
 - [x] Configure Travis CI to deploy

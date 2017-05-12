@@ -40,7 +40,7 @@ Furthermore, I've configured this repository to work with Travis CI so the label
 if you clone this project maybe you'll need to configure some things in order to work included and external libraries.
 Libraries used in this project:
 
-+ NewPing.h
++ NewPing.h `This library does not work with the ESP8266! `
 + SD.h
 + SPI.h
 + SparkFun DS1307 Real Time Clock

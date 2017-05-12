@@ -16,6 +16,7 @@
 #endif
 
 #include "configuration.h"
+#include "networking.h"
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <ESP8266WebServer.h>
@@ -24,14 +25,7 @@
 #include <SparkFunDS1307RTC.h> //https://github.com/sparkfun/SparkFun_DS1307_RTC_Arduino_Library
 #include <SD.h>
 #include <Wire.h>
-//Webserver stuff
-IPAddress local_IP(192,168,1,1);
-IPAddress gateway(192,168,1,0);
-IPAddress subnet(255,255,255,0);
-//Creating the server object
-WiFiServer server(webServerPort);
-ESP8266WebServer httpServer(webServerPort);
-ESP8266HTTPUpdateServer httpUpdater;
+
 //Some ESP stuff
 ADC_MODE(ADC_VCC);
 
@@ -81,42 +75,6 @@ void loop()
   getVolume();
   saveDataSD();
   delay(5000);
-}
-
-//------------------------WEBSERVER FUNCTIONS---------------------------
-void initSoftAP() {
-  log("Setting Soft-AP configuration...");
-  logln(WiFi.softAPConfig(local_IP, gateway, subnet) ? "Ready" : "Failed!");
-  log("Starting the WiFi module as SOFT AP...");
-  logln(WiFi.softAP(ssid, password) ? "Ready" : "Failed!");
-  log("Soft-AP IP address = ");
-  logln(WiFi.softAPIP());
-}
-void getClientsConnected() {
-  printf("Stations connected = %d\n", WiFi.softAPgetStationNum());
-}
-void initWebServer() {
-  server.begin();
-}
-void initMDNSServer() {
-  if (!MDNS.begin(hostnameMDNS)) {
-    logln("Error setting up MDNS responder!");
-    while(1) {
-      delay(1000);
-      //mDNS server not working
-    }
-  }
-  //The mDNS server has been started correctly
-  logln("mDNS responder started correctly");
-  //Add a service to mDNS-SD
-  MDNS.addService("http", "tcp", webServerPort);
-}
-
-void initOTAServer() {
-  logln("initializing the http OTA Server...");
-  httpUpdater.setup(&httpServer, updatePath, updateUsername, updatePassword);
-  httpServer.begin();
-  printf("HTTPUpdateServer ready! Open http://%s.local%s in your browser and login \n", hostnameMDNS, updatePath);
 }
 
 void handleClient() {

@@ -1,14 +1,27 @@
 /*###################################################################
-
 Marc Cobler - August 2016
 waterReservoirControl Project
 Water level sensing in well deposits.
 Ultrasonic HC-SR04 sensor.
+ESP8266 in the nodemcuv2 module.
 
 Configuration File
 Modify the parameters in order to adapt the code to your system
 Modify the pins in order to adapt to your hardware
 ###################################################################*/
+//#include guards
+#ifndef CONFIGURATION_H
+#define CONFIGURATION_H
+
+#define LOG
+#ifdef LOG
+  #define log(...) Serial.print(__VA_ARGS__)
+  #define logln(...) Serial.println(__VA_ARGS__)
+#else
+  #define log(...)
+  #define logln(...)
+#endif
+
 // webserver Soft-AP values and definitions
 const char* ssid = "WRC";
 const char* password = "123456789";
@@ -56,3 +69,5 @@ const int SDCS = 4; //Need to change because TFT is on the same CS pin
 //RTC - Real Time Module pins
 #define RTCDATA 4
 #define RTCCLOCK 3
+
+#endif //configuration.h

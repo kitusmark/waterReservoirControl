@@ -45,6 +45,7 @@ const char* LOGFILENAME = "log.csv";
 
 //The number of samples taken when getting the distance
 #define SENSORSAMPLES 5
+#define DELAYBETWEENSAMPLES 250 //in milliseconds
 
 //The number of samples stored to calculate flows and stuff
 #define HISTORY 10
@@ -65,6 +66,7 @@ const int SDCS = 4; //Need to change because TFT is on the same CS pin
 #define ECHO 8 //pin for the return wave
 //Max distance that the NewPing library can compute. In centimeters
 #define MAX_DISTANCE 250
+#define SPEEDOFSOUND 10000.0 / 29 //  340 m/s
 
 //RTC - Real Time Module pins
 #define RTCDATA 4

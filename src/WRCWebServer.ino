@@ -6,15 +6,6 @@
 //Obtaining the distance of the surface and knowing the measures of the deposit, we can calculate the volume of water
 //contained. All the data is served in a simple webpage and stored in a SD card for datalogging.
 //Comment to disable Serial debug
-#define LOG
-#ifdef LOG
-  #define log(...) Serial.print(__VA_ARGS__)
-  #define logln(...) Serial.println(__VA_ARGS__)
-#else
-  #define log(...)
-  #define logln(...)
-#endif
-
 #include "configuration.h"
 #include "networking.h"
 #include <ESP8266WiFi.h>
@@ -30,16 +21,16 @@
 ADC_MODE(ADC_VCC);
 
 //************** Program variables *******************************
-bool cardPresent;   //Variable to know if the SD card is present or not
-bool logFileExists; //Variable to know if the log file already exists
+bool cardPresent;     //Variable to know if the SD card is present or not
+bool logFileExists;   //Variable to know if the log file already exists
 
-int timeStamp[7];   //int Array to store the time from the RTC Module
+int timeStamp[7];      //int Array to store the time from the RTC Module
 String timeStampString;
-String dataString;  //String to save the information to the SD card
+String dataString;     //String to save the information to the SD card
 
-unsigned int waterLevel;    //Variable that stores the water level in meters
-unsigned int liters;        //Variable that stores the amount of water in liters
-unsigned long volume;       //Varible that stores the amount of water in cubic centimenters. MAX volume is HEIGHT*WIDTH*DEPTH
+float waterLevel;      //Variable that stores the water level in meters
+unsigned int liters;   //Variable that stores the amount of water in liters
+unsigned long volume;  //Varible that stores the amount of water in cubic centimenters. MAX volume is HEIGHT*WIDTH*DEPTH
 
 void setup()
 {
@@ -49,7 +40,10 @@ void setup()
   logln("BOOTLOADER GARBAGE...");
   logln(" ");
   logln("Water Reservoir Monitoring Starting...");
-  pinMode(SDCS, OUTPUT);
+  //Configure some pins
+  pinMode(TRIGGER, OUTPUT); //Ultrasonic sensor trigger pin
+  pinMode(ECHO, OUTPUT);    //Ultrasonic sensor echo pin
+  pinMode(SDCS, OUTPUT);    //SD card module Chip Select
   // see if the card is present and can be initialized:
   initSDCard();
   yield();
@@ -71,7 +65,7 @@ void loop()
 {
   handleClient();
   getTime();
-  // getDistance();
+  averageWaterLevel();
   getVolume();
   saveDataSD();
   delay(5000);
@@ -139,6 +133,51 @@ void printModuleInfo() {
   log(" - VCC Voltage: ");
   log(ESP.getVcc());
   logln(" mV");
+}
+
+void averageWaterLevel() {
+    float distanceAccum = 0;
+    waterLevel = 0;
+    for (uint8_t i = 0; i < SENSORSAMPLES; i++) {
+      distanceAccum += getDistance();
+      delay(DELAYBETWEENSAMPLES);
+    }
+    //Make the average
+    distanceAccum = distanceAccum / SENSORSAMPLES;
+    if (distanceAccum > HEIGHT) {
+      logln("Distance measured overflow... Please check");
+      distanceAccum = 0;
+    } else {
+      waterLevel = HEIGHT - distanceAccum;
+      log("The water level is: ");
+      log(waterLevel);
+      logln(" cm");
+    }
+}
+
+float getDistance() {
+    //Get the actual distance to the water surface
+    long pulseDuration;
+    unsigned int distance = 0;
+    float level = 0;
+    logln("Getting the distance...");
+    digitalWrite(TRIGGER, LOW);
+    delay(2);
+    digitalWrite(TRIGGER, HIGH);
+    delay(10);
+    digitalWrite(TRIGGER, LOW);
+    //get the response back
+    pulseDuration = pulseIn(ECHO, HIGH);
+    distance = microsecondsToCentimeters(pulseDuration, SPEEDOFSOUND);
+    return distance;
+}
+
+float microsecondsToCentimeters(long microseconds, float c) {
+  // The speed of sound is 340 m/s or 29 microseconds per centimeter.
+  // actually 29 microsec/cm = 10000/29 = 344.8 m/s, ie 22.3 deg C
+  // The ping travels out and back, so to find the distance of the
+  // object we take half of the distance travelled.
+  return microseconds * c / 20000;
 }
 
 void getVolume(){
